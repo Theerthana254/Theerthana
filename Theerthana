@@ -1,0 +1,102 @@
+from django.db import models
+
+class Book(models.Model):
+    title = models.CharField(max_length=200)
+    author = models.CharField(max_length=100)
+    category = models.CharField(max_length=100)
+    is_available = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.title
+
+class BorrowHistory(models.Model):
+    book = models.ForeignKey(Book, on_delete=models.CASCADE)
+    user = models.CharField(max_length=100)
+    borrowed_at = models.DateTimeField(auto_now_add=True)
+from rest_framework import serializers
+from .models import Book, BorrowHistory
+
+class BookSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Book
+        fields = '__all__'
+
+class BorrowHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BorrowHistory
+        fields = '__all__'
+from rest_framework import viewsets
+from .models import Book, BorrowHistory
+from .serializers import BookSerializer, BorrowHistorySerializer
+
+class BookViewSet(viewsets.ModelViewSet):
+    queryset = Book.objects.all()
+    serializer_class = BookSerializer
+
+class BorrowHistoryViewSet(viewsets.ModelViewSet):
+    queryset = BorrowHistory.objects.all()
+    serializer_class = BorrowHistorySerializer
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from library.views import BookViewSet, BorrowHistoryViewSet
+
+router = DefaultRouter()
+router.register(r'books', BookViewSet)
+router.register(r'history', BorrowHistoryViewSet)
+
+urlpatterns = [
+    path('api/', include(router.urls)),
+]
+INSTALLED_APPS = [
+    ...
+    'rest_framework',
+    'library',
+    'corsheaders',
+]
+
+MIDDLEWARE = [
+    ...
+    'corsheaders.middleware.CorsMiddleware',
+]
+
+CORS_ORIGIN_ALLOW_ALL = True
+npx create-react-app elibrary-frontend
+cd elibrary-frontend
+npm install axios react-router-dom
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+function BookList() {
+  const [books, setBooks] = useState([]);
+
+  useEffect(() => {
+    axios.get('http://localhost:8000/api/books/')
+      .then(res => setBooks(res.data));
+  }, []);
+
+  return (
+    <div>
+      <h2>Books</h2>
+      <ul>
+        {books.map(book => (
+          <li key={book.id}>{book.title} by {book.author} ({book.is_available ? "Available" : "Borrowed"})</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default BookList;
+import React from 'react';
+import BookList from './BookList';
+
+function App() {
+  return (
+    <div className="App">
+      <h1>E-Library</h1>
+      <BookList />
+    </div>
+  );
+}
+
+export default App;
